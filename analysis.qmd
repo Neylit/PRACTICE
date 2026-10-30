@@ -28,14 +28,14 @@ source('https://inkaverse.com/setup.r')
 # Data import
 
 ```{r}
-gs <- "https://docs.google.com/spreadsheets/d/15r7ZwcZZHbEgltlF6gSFvCTFA-CFzVBWwg3mFlRyKPs/edit?gid=172957346#gid=172957346" %>% 
+gs <- "https://docs.google.com/spreadsheets/d/1QziIXGOwb8cl3GaARJq6Ez6aU7vND_UHKJnFcAKx0VI/edit?gid=800931632#gid=800931632" %>% 
   as_sheets_id()
 
-fb <- gs %>% 
-  range_read(ss = .,sheet = "fb") %>% 
-  mutate(across(c(1:4), ~ as.factor(.))) 
+pisum <- gs %>% 
+  range_read(ss = .,sheet = "pisum") %>% 
+  mutate(across(c(1:9), ~ as.factor(.))) 
 
-fb %>% str()
+pisum %>% str()
 ```
 
 # Multivariate
@@ -45,12 +45,12 @@ fb %>% str()
 
 library(factoextra)
 
-dtx <- fb %>% 
-  dplyr::select(!c("block", "replication")) %>% 
-  group_by(irrigation, genotype) %>%
+dtx <- pisum %>% 
+  dplyr::select(!c("plots", "ntreat", "sort", "block", "rows", "cols", "seeds")) %>% 
+  group_by(Inoculant, peg) %>%
   summarise(across(where(is.numeric), ~ mean(.x, na.rm = TRUE))) %>% 
   
-  unite("rowname", c("irrigation", "genotype"), remove = F, sep = "-") %>% 
+  unite("rowname", c("Inoculant", "peg"), remove = F, sep = "-") %>% 
   column_to_rownames(var = "rowname") %>% 
   as.data.frame()
 
@@ -99,33 +99,38 @@ cls$data.clust %>%
   kable(caption = "Cluster membership of each individual")  
 cls$desc.var$quanti %>% 
   kable(caption = "Quantitative variables characterizing each cluster")
-cls$desc.var$category%>% 
+cls$desc.var$category %>% 
   kable(caption = "Categorical variables significantly by cluster")  
 table(cls$data.clust$clust) %>% 
   kable(caption = "Number of individuals assigned to each cluster")
 
-plot <- list(var, cos, ind, map) %>% 
-  plot_grid(plotlist = ., ncol = 2, labels = "auto") %>% 
-  ggsave(plot = ., "manuscript/multivariate.jpg", units = "cm"
+plot <- list(var, cos, ind, map()) %>% 
+  plot_grid(plotlist = ., ncol = 2, labels = "auto")
+
+dir.create("manuscript", showWarnings = FALSE, recursive = TRUE)
+
+ggsave(plot = plot, "manuscript/multivariate.jpg", units = "cm"
                 , width = 30, height = 30)
 
-plot %>% include_graphics()
+include_graphics("manuscript/multivariate.jpg")
 ```
 
-## PCA information
+
+# PCA information
 
 ```{r}
+
 c1 <- fviz_eig(mv, 
                 addlabels = TRUE,
                 hjust = 0.05,
-                barfill="white",
-                barcolor ="darkblue",
-                linecolor ="red") + 
+                barfill = "white",
+                barcolor = "darkblue",
+                linecolor = "red") + 
   # ylim(0, 30) +
   labs(
     title = "PCA - percentage of explained variances",
     y = "Variance (%)") +
-  theme_minimal()  +
+  theme_minimal() +
   theme(
     axis.text.x = element_text(size = 12)
     , axis.text.y = element_text(size = 12)
@@ -133,17 +138,18 @@ c1 <- fviz_eig(mv,
 
 c1
 
+
 c2 <- fviz_contrib(mv,
                      choice = "var", 
                      axes = 1, 
-                     top = 30,
-                     fill="white",
-                     color ="darkblue"
+                     top = 10,
+                     fill = "white",
+                     color = "darkblue"
                    , sort.val = "asc"
                    ) +
   # ylim(0, 8) +
   labs(title = "Dim 1 - variables contribution", x = "") +
-  coord_flip()  +
+  coord_flip() +
   theme(
     axis.text.x = element_text(size = 12)
     , axis.text.y = element_text(size = 12)
@@ -151,17 +157,18 @@ c2 <- fviz_contrib(mv,
 
 c2
 
+
 c3 <- fviz_contrib(mv,
                      choice = "var", 
                      axes = 2, 
-                     top = 30,
-                     fill="white",
-                     color ="darkblue"
+                     top = 10,
+                     fill = "white",
+                     color = "darkblue"
                    , sort.val = "asc"
                    ) +
   # ylim(0, 8) +
   labs(title = "Dim 2 - variables contribution", x = "") +
-  coord_flip()  +
+  coord_flip() +
   theme(
     axis.text.x = element_text(size = 12)
     , axis.text.y = element_text(size = 12)
@@ -169,10 +176,12 @@ c3 <- fviz_contrib(mv,
 
 c3
 
+
 lpanel <- c(c1, c2, c3) %>% 
   plot_grid(plotlist = ., ncol = 1, labels = "auto"
             , rel_heights = c(1, 1.2, 1.2))
   
+
 rpanel <- \() {
   
 pcainfo$cos2[, 1:2] %>% 
@@ -193,14 +202,21 @@ pcainfo$cos2[, 1:2] %>%
 
 }
 
+
 grid <- c(lpanel, rpanel) %>% 
   plot_grid(plotlist = ., ncol = 2, labels = c("", "d"))
 
-plot <- grid %>% 
-  ggsave(plot = ., "manuscript/contribution.jpg"
-         , units = "cm"
-         , width = 28, height = 36)
 
-plot %>% include_graphics()
+ggsave(
+  plot = grid,
+  "manuscript/contribution.jpg",
+  units = "cm",
+  width = 28,
+  height = 36,
+  dpi = 300
+)
+
+include_graphics("manuscript/contribution.jpg")
+
 ```
 
